@@ -2,5 +2,9 @@
   "name": "kontinuum-s3-deploy",
   "version": "0.0.0",
   "main": "index.js",
-  "license": "MIT"
+  "license": "MIT",
+  "scripts": {
+    "version": "git add .",
+    "postversion": "git push && git push --tags && npm publish"
+  }
 }
