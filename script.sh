@@ -55,8 +55,6 @@ fi
 
 make_bucket() {
   name=$1
-  isIndex=$2
-
   # aws s3api create-bucket --bucket $name &&
   aws s3 mb s3://$name &&
   aws s3api put-bucket-policy --bucket $name --policy "$(echo '{
@@ -71,20 +69,24 @@ make_bucket() {
       }
     ]
   }' | sed -e "s/example\.com/$name/g")" &&
-  aws s3 website s3://$name/ --index-document index.html
+  aws s3 website s3://$name/ --index-document index.html || { exit 1; }
+}
 
-  if [[ $isIndex ]]; then
-    echo www.$name
-    # aws s3api create-bucket --bucket www.$name &&
-    aws s3 mb s3://www.$name &&
-    aws s3api put-bucket-website --bucket www.$name --website-configuration "$(echo '{
-      "RedirectAllRequestsTo": {
-        "HostName": "example.com"
-      }
-    }' | sed -e "s/example\.com/$name/g")"
-  fi
+make_index_bucket() {
+  name=$1
+
+  # aws s3api create-bucket --bucket www.$name &&
+  aws s3 mb s3://www.$name &&
+  aws s3api put-bucket-website --bucket www.$name --website-configuration "$(echo '{
+    "RedirectAllRequestsTo": {
+      "HostName": "example.com"
+    }
+  }' | sed -e "s/example\.com/$name/g")" || { exit 1; }
 }
 
 # create bucket if it doesn't exist
-aws s3 ls | grep $name || make_bucket $name $isIndex
+aws s3 ls | grep $name || make_bucket $name || { exit 1; }
+if [[ $isIndex ]]; then
+  aws s3 ls | grep www.$name || make_index_bucket $name || { exit 1; }
+fi
 aws s3 sync $source s3://$name --delete
